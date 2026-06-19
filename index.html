@@ -1,0 +1,2274 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Garden — Dashboard</title>
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Sistem monitoring dan kontrol penyiraman tanaman berbasis IoT terintegrasi dengan Firebase Realtime Database.">
+  <meta name="theme-color" content="#0a0a0f">
+  
+  <style>
+    /* ==========================================
+       1. COLOR PALETTE & DESIGN TOKENS
+       ========================================== */
+    :root {
+      /* Shared Constants & Animation Speeds */
+      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-normal: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-slow: 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+
+      /* Colors for dark mode (default) */
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #111118;
+      --bg-glass: rgba(255, 255, 255, 0.04);
+      --bg-glass-hover: rgba(255, 255, 255, 0.07);
+      
+      --accent-green: #30d158;
+      --accent-green-glow: rgba(48, 209, 88, 0.25);
+      --accent-blue: #0a84ff;
+      --accent-blue-glow: rgba(10, 132, 255, 0.25);
+      --accent-orange: #ff9f0a;
+      --accent-orange-glow: rgba(255, 159, 10, 0.25);
+      --accent-red: #ff453a;
+      --accent-red-glow: rgba(255, 69, 58, 0.25);
+
+      --text-primary: #f5f5f7;
+      --text-secondary: #98989d;
+      --text-tertiary: #636366;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-active: rgba(48, 209, 88, 0.4);
+      --shadow-color: rgba(0, 0, 0, 0.5);
+
+      /* Range track background */
+      --slider-track-bg: rgba(255, 255, 255, 0.1);
+      --input-bg: rgba(255, 255, 255, 0.04);
+    }
+
+    [data-theme="light"] {
+      --bg-primary: #f5f5f7;
+      --bg-secondary: #ffffff;
+      --bg-glass: rgba(0, 0, 0, 0.03);
+      --bg-glass-hover: rgba(0, 0, 0, 0.06);
+      
+      --accent-green: #24b147;
+      --accent-green-glow: rgba(36, 177, 71, 0.2);
+      --accent-blue: #0071e3;
+      --accent-blue-glow: rgba(0, 113, 227, 0.2);
+      --accent-orange: #ff9500;
+      --accent-orange-glow: rgba(255, 149, 0, 0.2);
+      --accent-red: #ff3b30;
+      --accent-red-glow: rgba(255, 59, 48, 0.2);
+
+      --text-primary: #1d1d1f;
+      --text-secondary: #6e6e73;
+      --text-tertiary: #aeaeb2;
+      --border-subtle: rgba(0, 0, 0, 0.08);
+      --border-active: rgba(36, 177, 71, 0.4);
+      --shadow-color: rgba(0, 0, 0, 0.05);
+
+      --slider-track-bg: rgba(0, 0, 0, 0.06);
+      --input-bg: rgba(0, 0, 0, 0.03);
+    }
+
+    /* ==========================================
+       2. BASE STYLES & RESET
+       ========================================== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      letter-spacing: -0.01em;
+      transition: background-color var(--transition-slow), color var(--transition-normal);
+      min-height: 100vh;
+      padding-top: 60px;
+      overflow-x: hidden;
+    }
+
+    /* Accessibility: Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* Container layout */
+    .container {
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Standard Card Structure */
+    .card {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      transition: transform var(--transition-normal), background-color var(--transition-normal), border-color var(--transition-normal), box-shadow var(--transition-normal);
+      box-shadow: 0 4px 20px var(--shadow-color);
+    }
+
+    /* Staggered load animation */
+    [data-animate] {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity var(--transition-slow), transform var(--transition-slow);
+    }
+
+    [data-animate].visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ==========================================
+       3. NAVBAR COMPONENT
+       ========================================== */
+    .navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      background: rgba(10, 10, 15, 0.8);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: background-color var(--transition-normal), border-color var(--transition-normal);
+    }
+
+    [data-theme="light"] .navbar {
+      background: rgba(245, 245, 247, 0.85);
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-brand svg {
+      width: 22px;
+      height: 22px;
+      fill: var(--accent-green);
+    }
+
+    .nav-title {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-glass);
+      padding: 6px 12px;
+      border-radius: 100px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      background-color: var(--accent-green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent-green);
+      animation: live-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes live-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.3); }
+    }
+
+    .live-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-btn {
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color var(--transition-fast), color var(--transition-fast);
+    }
+
+    .nav-btn:hover {
+      background-color: var(--bg-glass-hover);
+    }
+
+    .nav-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+
+    /* Offline Toast / Banner */
+    .offline-banner {
+      background-color: var(--accent-orange-glow);
+      border: 1px solid var(--accent-orange);
+      border-radius: 16px;
+      padding: 12px 18px;
+      color: var(--accent-orange);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      backdrop-filter: blur(10px);
+    }
+
+    .offline-banner button {
+      background-color: var(--accent-orange);
+      border: none;
+      color: #000;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    /* ==========================================
+       4. HERO & ORB COMPONENT
+       ========================================== */
+    .hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 24px;
+      padding: 32px 16px 20px;
+    }
+
+    @media (min-width: 768px) {
+      .hero {
+        flex-direction: row;
+        text-align: left;
+        align-items: center;
+        justify-content: space-between;
+        padding: 40px 48px;
+      }
+    }
+
+    .hero-orb {
+      position: relative;
+      width: 240px;
+      height: 240px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .orb-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px dashed;
+      animation: orbit 16s linear infinite;
+    }
+
+    .orb-ring-1 {
+      width: 180px; height: 180px;
+      border-color: rgba(48, 209, 88, 0.15);
+      animation-duration: 20s;
+    }
+
+    .orb-ring-2 {
+      width: 220px; height: 220px;
+      border-color: rgba(48, 209, 88, 0.08);
+      animation-duration: 25s;
+      animation-direction: reverse;
+    }
+
+    @keyframes orbit {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    .orb-core {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(48, 209, 88, 0.12) 0%, rgba(10, 10, 15, 0.1) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 30px rgba(48, 209, 88, 0.05);
+    }
+
+    .health-ring {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .health-ring svg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .ring-bg {
+      fill: none;
+      stroke: var(--bg-glass);
+      stroke-width: 6;
+    }
+
+    .ring-progress {
+      fill: none;
+      stroke: var(--accent-green);
+      stroke-width: 6;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1), stroke var(--transition-normal);
+    }
+
+    .health-score {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1.1;
+    }
+
+    .score-number {
+      font-size: 38px;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+    }
+
+    .score-label {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+    }
+
+    .hero-text {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 480px;
+    }
+
+    .hero-eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--accent-green);
+      text-transform: uppercase;
+    }
+
+    .hero-headline {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+    }
+
+    .hero-sub {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--text-secondary);
+    }
+
+    /* ==========================================
+       5. SENSOR CARDS GRID
+       ========================================== */
+    .sensor-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    @media (min-width: 640px) {
+      .sensor-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .sensor-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .sensor-card {
+      background: var(--bg-glass);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 20px;
+      transition: transform var(--transition-normal), background-color var(--transition-normal), border-color var(--transition-normal), box-shadow var(--transition-normal);
+    }
+
+    .sensor-card::before {
+      content: '';
+      position: absolute;
+      top: -30px; left: -30px;
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      filter: blur(35px);
+      opacity: 0.15;
+      pointer-events: none;
+      transition: opacity var(--transition-normal);
+    }
+
+    .sensor-card[data-type="temp"]::before { background-color: var(--accent-orange); }
+    .sensor-card[data-type="hum"]::before  { background-color: var(--accent-blue); }
+    .sensor-card[data-type="soil"]::before { background-color: var(--accent-green); }
+
+    .sensor-card:hover {
+      transform: translateY(-4px) scale(1.01);
+      background-color: var(--bg-glass-hover);
+      box-shadow: 0 16px 40px var(--shadow-color);
+    }
+
+    .sensor-card[data-type="temp"]:hover { border-color: rgba(255, 159, 10, 0.35); }
+    .sensor-card[data-type="hum"]:hover  { border-color: rgba(10, 132, 255, 0.35); }
+    .sensor-card[data-type="soil"]:hover { border-color: rgba(48, 209, 88, 0.35); }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .temp-icon { background: rgba(255, 159, 10, 0.1); color: var(--accent-orange); }
+    .hum-icon  { background: rgba(10, 132, 255, 0.1); color: var(--accent-blue); }
+    .soil-icon { background: rgba(48, 209, 88, 0.1); color: var(--accent-green); }
+
+    .card-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.2;
+    }
+
+    .card-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      line-height: 1.2;
+    }
+
+    .card-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .status-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 100px;
+    }
+
+    .status-ok { background: rgba(48, 209, 88, 0.1); color: var(--accent-green); }
+    .status-warn { background: rgba(255, 159, 10, 0.1); color: var(--accent-orange); }
+    .status-err { background: rgba(255, 69, 58, 0.1); color: var(--accent-red); }
+
+    .card-value {
+      display: flex;
+      align-items: baseline;
+    }
+
+    .value-number {
+      font-size: 52px;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .value-unit {
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-left: 4px;
+    }
+
+    .card-delta {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .delta-icon {
+      font-weight: 700;
+    }
+
+    .mini-sparkline {
+      height: 32px;
+      margin-top: 4px;
+    }
+
+    .sparkline-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .sparkline-path {
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .sparkline-temp { stroke: var(--accent-orange); }
+    .sparkline-hum  { stroke: var(--accent-blue); }
+    .sparkline-soil { stroke: var(--accent-green); }
+
+    /* ==========================================
+       6. ROW LAYOUTS & DEVICE STATUS / PUMP
+       ========================================== */
+    .row-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    @media (min-width: 768px) {
+      .row-grid-2 {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--text-primary);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.2;
+    }
+
+    /* Device Status list */
+    .status-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      background: var(--bg-glass);
+      padding: 12px 16px;
+      border-radius: 16px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 12px;
+    }
+
+    .dot-green { background-color: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+    .dot-orange { background-color: var(--accent-orange); box-shadow: 0 0 8px var(--accent-orange); }
+    .dot-red { background-color: var(--accent-red); box-shadow: 0 0 8px var(--accent-red); }
+
+    .status-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      flex: 1;
+    }
+
+    .status-val {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    /* Pump & Mode section */
+    .mode-toggle-wrapper {
+      margin-bottom: 20px;
+    }
+
+    .mode-toggle {
+      position: relative;
+      display: flex;
+      background: var(--input-bg);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 4px; left: 4px;
+      height: calc(100% - 8px);
+      width: calc(50% - 4px);
+      background: var(--accent-green);
+      border-radius: 10px;
+      transition: transform var(--transition-normal), background-color var(--transition-normal), box-shadow var(--transition-normal);
+      box-shadow: 0 4px 12px var(--accent-green-glow);
+    }
+
+    .mode-toggle.manual .toggle-thumb {
+      transform: translateX(calc(100% + 4px));
+      background: var(--accent-blue);
+      box-shadow: 0 4px 12px var(--accent-blue-glow);
+    }
+
+    .toggle-opt {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      padding: 10px 12px;
+      border: none;
+      background: none;
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: color var(--transition-fast);
+      font-family: inherit;
+    }
+
+    .toggle-opt.active {
+      color: #000;
+    }
+
+    [data-theme="light"] .toggle-opt.active {
+      color: #ffffff;
+    }
+
+    .toggle-opt svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.2;
+    }
+
+    .pump-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .pump-buttons-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .pump-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      font-family: inherit;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pump-on {
+      background: var(--accent-green);
+      color: #000;
+      box-shadow: 0 0 0 0 var(--accent-green-glow);
+    }
+
+    [data-theme="light"] .pump-on {
+      color: #ffffff;
+    }
+
+    .pump-on.active {
+      animation: pump-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pump-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 var(--accent-green-glow); }
+      50%       { box-shadow: 0 0 0 10px rgba(48,209,88,0); }
+    }
+
+    .pump-off {
+      background: rgba(255, 69, 58, 0.1);
+      color: var(--accent-red);
+      border: 1px solid rgba(255, 69, 58, 0.2);
+    }
+
+    .pump-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* Ripple effect */
+    .pump-btn::after {
+      content: '';
+      position: absolute; top: 50%; left: 50%;
+      width: 0; height: 0;
+      background: rgba(255, 255, 255, 0.25);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      transition: width 0.4s, height 0.4s, opacity 0.4s;
+      opacity: 0;
+    }
+
+    /* Loading State for Buttons */
+    .btn-loading {
+      opacity: 0.7;
+      pointer-events: none;
+      position: relative;
+      color: transparent !important;
+    }
+    .btn-loading > * {
+      opacity: 0;
+    }
+    .btn-loading::before {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      top: 50%;
+      left: 50%;
+      margin-top: -9px;
+      margin-left: -9px;
+      border: 2px solid transparent;
+      border-top-color: var(--text-primary);
+      border-right-color: var(--text-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    .pump-btn.btn-loading::before {
+      border-top-color: #fff;
+      border-right-color: #fff;
+    }
+    [data-theme="light"] .pump-on.btn-loading::before {
+      border-top-color: #fff;
+      border-right-color: #fff;
+    }
+    [data-theme="light"] .pump-off.btn-loading::before {
+      border-top-color: var(--accent-red);
+      border-right-color: var(--accent-red);
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .pump-btn:active::after {
+      width: 240px; height: 240px; opacity: 0;
+    }
+
+    .pump-info-banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background-color: var(--accent-blue-glow);
+      border: 1px solid rgba(10, 132, 255, 0.2);
+      border-radius: 14px;
+      color: var(--accent-blue);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.3;
+    }
+
+    .pump-info-banner svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.2;
+      flex-shrink: 0;
+    }
+
+    /* ==========================================
+       7. HISTORICAL SVG CHART COMPONENT
+       ========================================== */
+    .chart-header {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    @media (min-width: 480px) {
+      .chart-header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+      }
+    }
+
+    .chart-tabs {
+      display: flex;
+      background: var(--input-bg);
+      border: 1px solid var(--border-subtle);
+      padding: 3px;
+      border-radius: 10px;
+      gap: 2px;
+    }
+
+    .chart-tab {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      font-family: inherit;
+    }
+
+    .chart-tab.active {
+      background: var(--bg-glass-hover);
+      color: var(--text-primary);
+    }
+
+    .chart-container {
+      position: relative;
+      height: 200px;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .chart-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .chart-line {
+      fill: none;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 2000;
+      stroke-dashoffset: 2000;
+      transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1), stroke var(--transition-normal);
+    }
+
+    .chart-line.animate {
+      stroke-dashoffset: 0;
+    }
+
+    .chart-fill {
+      opacity: 0;
+      transition: opacity 0.5s 0.8s;
+    }
+
+    .chart-fill.animate {
+      opacity: 1;
+    }
+
+    .chart-x-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      padding: 0 4px;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-tertiary);
+    }
+
+    /* ==========================================
+       8. AUTO WATERING CONFIG RANGE SLIDERS
+       ========================================== */
+    .threshold-config {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .threshold-item {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .threshold-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .threshold-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .threshold-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent-green);
+    }
+
+    .threshold-item:last-of-type .threshold-value {
+      color: var(--accent-blue);
+    }
+
+    .slider-track {
+      position: relative;
+      height: 6px;
+      background: var(--slider-track-bg);
+      border-radius: 3px;
+      margin: 12px 0 6px;
+    }
+
+    .slider-fill {
+      position: absolute;
+      top: 0; left: 0;
+      height: 100%;
+      background: var(--accent-green);
+      border-radius: 3px;
+      pointer-events: none;
+    }
+
+    .stop-fill {
+      background: var(--accent-blue);
+    }
+
+    .custom-slider {
+      position: absolute;
+      top: -7px; left: 0;
+      width: 100%;
+      height: 20px;
+      -webkit-appearance: none;
+      background: transparent;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .custom-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      transition: transform 0.1s;
+    }
+
+    .custom-slider:active::-webkit-slider-thumb {
+      transform: scale(1.25);
+    }
+
+    .custom-slider::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      transition: transform 0.1s;
+    }
+
+    .custom-slider:active::-moz-range-thumb {
+      transform: scale(1.25);
+    }
+
+    .threshold-hint {
+      font-size: 11px;
+      color: var(--text-tertiary);
+    }
+
+    .save-btn {
+      width: 100%;
+      padding: 16px;
+      background: var(--accent-green);
+      color: #000;
+      border: none;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all var(--transition-normal);
+      font-family: inherit;
+    }
+
+    [data-theme="light"] .save-btn {
+      color: #ffffff;
+    }
+
+    .save-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.5;
+    }
+
+    .save-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px var(--accent-green-glow);
+    }
+
+    .save-btn:active {
+      transform: translateY(0) scale(0.98);
+    }
+
+    .save-btn.saved {
+      background: rgba(48, 209, 88, 0.15);
+      color: var(--accent-green);
+      border: 1px solid var(--accent-green);
+      box-shadow: none;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    /* ==========================================
+       9. TIMELINE / ACTIVITY LOG COMPONENT
+       ========================================== */
+    .activity-log {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      margin-left: 6px;
+    }
+
+    .log-entry {
+      position: relative;
+      padding-left: 24px;
+      padding-bottom: 16px;
+    }
+
+    .log-entry:last-of-type {
+      padding-bottom: 0;
+    }
+
+    .log-dot {
+      position: absolute;
+      left: 0;
+      top: 5px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      z-index: 2;
+    }
+
+    .log-entry::after {
+      content: '';
+      position: absolute;
+      left: 3.5px;
+      top: 13px;
+      bottom: 0;
+      width: 1px;
+      background: var(--border-subtle);
+      z-index: 1;
+    }
+
+    .log-entry:last-of-type::after {
+      display: none;
+    }
+
+    .log-info .log-dot { background-color: var(--accent-blue); }
+    .log-water .log-dot { background-color: var(--accent-green); }
+    .log-warn .log-dot { background-color: var(--accent-orange); }
+
+    .log-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .log-time {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-tertiary);
+    }
+
+    .log-msg {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    /* ==========================================
+       10. TOAST NOTIFICATION CONTAINER
+       ========================================== */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120px);
+      z-index: 999;
+      width: calc(100% - 32px);
+      max-width: 380px;
+      background: var(--accent-red);
+      color: #ffffff;
+      padding: 14px 18px;
+      border-radius: 16px;
+      box-shadow: 0 12px 30px rgba(255, 69, 58, 0.3);
+      font-weight: 600;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .toast-container.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast-container svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.2;
+      flex-shrink: 0;
+    }
+
+    /* ==========================================
+       11. FOOTER COMPONENT
+       ========================================== */
+    footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 8px 40px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+    }
+
+    footer span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- FIXED NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <!-- Leaf icon inline SVG -->
+      <svg viewBox="0 0 24 24">
+        <path d="M12 2C6.48 2 2 6.48 2 12c0 1.83.62 3.53 1.66 4.93L13.1 7.5c.34-.34.8-.5 1.25-.44l3.18.44c1.07.15 1.76 1.21 1.48 2.25L17.5 14.5c-.24.9-.76 1.65-1.5 2.16l.44 3.18c.15 1.07-.91 1.76-1.95 1.48L5.07 19.34C6.47 20.38 8.17 21 10 21c5.52 0 10-4.48 10-10S17.52 2 12 2zm1 13c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
+      </svg>
+      <span class="nav-title">Smart Garden</span>
+    </div>
+    <div class="nav-status">
+      <span class="live-dot"></span>
+      <span class="live-label">LIVE</span>
+    </div>
+    <div class="nav-actions">
+      <button class="nav-btn" id="themeToggle" title="Ganti Tema" aria-label="Ganti Tema">
+        <!-- Sun/Moon toggle inline SVG -->
+        <svg id="themeIcon" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <div class="container">
+    
+    <!-- Offline/Firebase Status Warning -->
+    <div id="firebaseOfflineBanner" class="offline-banner" style="display: none;">
+      <span>Disconnected dari Firebase. Menjalankan Mode Simulasi...</span>
+      <button id="btnConnectFirebase">Sambungkan</button>
+    </div>
+
+    <!-- HERO SECTION -->
+    <section class="hero card" data-animate data-delay="100">
+      <div class="hero-orb">
+        <div class="orb-ring orb-ring-1"></div>
+        <div class="orb-ring orb-ring-2"></div>
+        <div class="orb-core">
+          <div class="health-ring">
+            <svg viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="54"/>
+              <circle class="ring-progress" cx="60" cy="60" r="54" 
+                      stroke-dasharray="339.29"
+                      stroke-dashoffset="0"/>
+            </svg>
+            <div class="health-score">
+              <span class="score-number" id="healthScore">94</span>
+              <span class="score-label">HEALTH</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-text">
+        <p class="hero-eyebrow" id="heroStatusText">Sistem Aktif — AUTO MODE</p>
+        <h1 class="hero-headline">Tanaman Anda<br>dalam kondisi optimal.</h1>
+        <p class="hero-sub">Pemantauan real-time · Penyiraman otomatis · 3 sensor aktif</p>
+      </div>
+    </section>
+
+    <!-- SENSORS GRID -->
+    <section class="sensor-grid">
+      <!-- Temperature Card -->
+      <div class="sensor-card" data-type="temp" data-animate data-delay="180">
+        <div class="card-header">
+          <div class="card-icon temp-icon">
+            <svg viewBox="0 0 24 24">
+              <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
+            </svg>
+          </div>
+          <div class="card-meta">
+            <span class="card-label">Suhu</span>
+            <span class="status-badge status-ok" id="tempBadge">Ideal</span>
+          </div>
+        </div>
+        <div class="card-value">
+          <span class="value-number" id="tempValue">28.2</span>
+          <span class="value-unit">°C</span>
+        </div>
+        <div class="card-delta">
+          <span class="delta-icon" id="tempDeltaIcon">▲</span>
+          <span class="delta-value" id="tempDeltaText">+0.3° dari 1 jam lalu</span>
+        </div>
+        <div class="mini-sparkline">
+          <svg class="sparkline-svg" viewBox="0 0 200 40" preserveAspectRatio="none">
+            <path class="sparkline-path sparkline-temp" id="tempSparkline" d=""/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Humidity Card -->
+      <div class="sensor-card" data-type="hum" data-animate data-delay="260">
+        <div class="card-header">
+          <div class="card-icon hum-icon">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+            </svg>
+          </div>
+          <div class="card-meta">
+            <span class="card-label">Kelembaban</span>
+            <span class="status-badge status-ok" id="humBadge">Ideal</span>
+          </div>
+        </div>
+        <div class="card-value">
+          <span class="value-number" id="humValue">76</span>
+          <span class="value-unit">%</span>
+        </div>
+        <div class="card-delta">
+          <span class="delta-icon" id="humDeltaIcon">▼</span>
+          <span class="delta-value" id="humDeltaText">-2% dari 1 jam lalu</span>
+        </div>
+        <div class="mini-sparkline">
+          <svg class="sparkline-svg" viewBox="0 0 200 40" preserveAspectRatio="none">
+            <path class="sparkline-path sparkline-hum" id="humSparkline" d=""/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Soil Moisture Card -->
+      <div class="sensor-card" data-type="soil" data-animate data-delay="340">
+        <div class="card-header">
+          <div class="card-icon soil-icon">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zM7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 2.88-2.88 7.19-5 9.88C9.92 16.21 7 11.85 7 9z" />
+            </svg>
+          </div>
+          <div class="card-meta">
+            <span class="card-label">Tanah</span>
+            <span class="status-badge status-ok" id="soilBadge">Cukup</span>
+          </div>
+        </div>
+        <div class="card-value">
+          <span class="value-number" id="soilValue">60</span>
+          <span class="value-unit">%</span>
+        </div>
+        <div class="card-delta">
+          <span class="delta-icon" id="soilDeltaIcon">●</span>
+          <span class="delta-value" id="soilDeltaText">Kondisi Stabil</span>
+        </div>
+        <div class="mini-sparkline">
+          <svg class="sparkline-svg" viewBox="0 0 200 40" preserveAspectRatio="none">
+            <path class="sparkline-path sparkline-soil" id="soilSparkline" d=""/>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- DEVICE STATUS + CONTROL ROW -->
+    <div class="row-grid row-grid-2">
+      
+      <!-- DEVICE STATUS CARD -->
+      <div class="card" data-animate data-delay="400">
+        <h2 class="section-title">
+          <svg viewBox="0 0 24 24">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+          </svg>
+          Status Perangkat
+        </h2>
+        <div class="status-list">
+          <div class="status-item">
+            <span class="status-dot dot-red" id="devOnlineDot"></span>
+            <span class="status-name">Sistem ESP32</span>
+            <span class="status-val" id="devOnlineText">Offline</span>
+          </div>
+          <div class="status-item">
+            <span class="status-dot dot-red" id="devWifiDot"></span>
+            <span class="status-name">Koneksi WiFi ESP32</span>
+            <span class="status-val" id="devWifiText">Terputus</span>
+          </div>
+          <div class="status-item">
+            <span class="status-dot dot-red" id="devSensorDot"></span>
+            <span class="status-name">Status Sensor</span>
+            <span class="status-val" id="devSensorText">Error</span>
+          </div>
+          <div class="status-item">
+            <span class="status-dot dot-red" id="devPumpDot"></span>
+            <span class="status-name">Pompa</span>
+            <span class="status-val" id="devPumpText">Mati</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PUMP CONTROL -->
+      <div class="card" data-animate data-delay="400">
+        <h2 class="section-title">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M12 3v9"/>
+          </svg>
+          Pump Control
+        </h2>
+        
+        <!-- Mode toggler (pill) -->
+        <div class="mode-toggle-wrapper">
+          <div class="mode-toggle" id="modeToggle">
+            <div class="toggle-thumb" id="toggleThumb"></div>
+            <button class="toggle-opt active" data-mode="auto" id="btnAutoMode">
+              <svg viewBox="0 0 24 24"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg> AUTO
+            </button>
+            <button class="toggle-opt" data-mode="manual" id="btnManualMode">
+              <svg viewBox="0 0 24 24"><path d="M20 7h-9M14 14H3M20 21h-7M14 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm-7 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm10 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/></svg> MANUAL
+            </button>
+          </div>
+        </div>
+
+        <div class="pump-controls">
+          <div class="pump-buttons-row">
+            <button class="pump-btn pump-on" id="pumpOnBtn" disabled>
+              <span class="pump-btn-icon">▶</span>
+              <span>Nyalakan Pompa</span>
+            </button>
+            <button class="pump-btn pump-off" id="pumpOffBtn" disabled>
+              <span class="pump-btn-icon">■</span>
+              <span>Matikan Pompa</span>
+            </button>
+          </div>
+          <div class="pump-info-banner" id="pumpInfoBanner">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            <span>Pompa dikendalikan otomatis berdasarkan kelembaban tanah.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHARTS + CONFIG ROW -->
+    <div class="row-grid row-grid-2">
+      <!-- 24H SVG CHART CARD -->
+      <div class="card" data-animate data-delay="500">
+        <div class="chart-header">
+          <h2 class="section-title" style="margin-bottom: 0;">
+            <svg viewBox="0 0 24 24">
+              <path d="M3 3v18h18M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+            </svg>
+            Riwayat 24 Jam
+          </h2>
+          <div class="chart-tabs">
+            <button class="chart-tab active" data-chart="temp">Suhu</button>
+            <button class="chart-tab" data-chart="hum">Kelembaban</button>
+            <button class="chart-tab" data-chart="soil">Tanah</button>
+          </div>
+        </div>
+        <div class="chart-container">
+          <svg id="mainChart" class="chart-svg" viewBox="0 0 800 200" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop id="gradStopStart" offset="0%" stop-color="#ff9f0a" stop-opacity="0.25"/>
+                <stop id="gradStopEnd" offset="100%" stop-color="#ff9f0a" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <!-- SVG grid lines -->
+            <line x1="0" y1="50" x2="800" y2="50" stroke="var(--border-subtle)" stroke-dasharray="4"/>
+            <line x1="0" y1="100" x2="800" y2="100" stroke="var(--border-subtle)" stroke-dasharray="4"/>
+            <line x1="0" y1="150" x2="800" y2="150" stroke="var(--border-subtle)" stroke-dasharray="4"/>
+            
+            <path id="chartFill" class="chart-fill" d=""/>
+            <path id="chartPath" class="chart-line animate" d=""/>
+          </svg>
+          <div class="chart-x-labels">
+            <span>24 jam lalu</span>
+            <span>12 jam lalu</span>
+            <span>Sekarang</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- AUTO WATERING CONFIG (Range sliders) -->
+      <div class="card" data-animate data-delay="500">
+        <h2 class="section-title">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>
+          </svg>
+          Pengaturan Penyiraman Otomatis
+        </h2>
+        <div class="threshold-config">
+          <div class="threshold-item">
+            <div class="threshold-header">
+              <span class="threshold-label">Mulai Menyiram</span>
+              <span class="threshold-value" id="startVal">30%</span>
+            </div>
+            <div class="slider-track">
+              <div class="slider-fill" id="startFill" style="width: 30%"></div>
+              <input type="range" class="custom-slider" id="startSlider" min="10" max="90" value="30">
+            </div>
+            <p class="threshold-hint">Pompa aktif saat kelembaban turun di bawah nilai ini</p>
+          </div>
+          
+          <div class="threshold-item">
+            <div class="threshold-header">
+              <span class="threshold-label">Berhenti Menyiram</span>
+              <span class="threshold-value" id="stopVal">60%</span>
+            </div>
+            <div class="slider-track">
+              <div class="slider-fill stop-fill" id="stopFill" style="width: 60%"></div>
+              <input type="range" class="custom-slider stop-slider" id="stopSlider" min="10" max="90" value="60">
+            </div>
+            <p class="threshold-hint">Pompa mati saat kelembaban mencapai nilai ini</p>
+          </div>
+        </div>
+        
+        <button class="save-btn" id="saveThresholdBtn">
+          <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+          Simpan Pengaturan
+        </button>
+      </div>
+    </div>
+
+    <!-- ACTIVITY LOG -->
+    <div class="card" data-animate data-delay="580">
+      <h2 class="section-title">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
+        </svg>
+        Riwayat Aktivitas
+      </h2>
+      <div class="activity-log" id="activityLog">
+        <!-- Logs dynamically injected -->
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+      <span>
+        <svg viewBox="0 0 24 24" style="width:12px; height:12px; stroke:currentColor; fill:none;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        Last Update: <span id="textLastUpdate">-</span>
+      </span>
+      <span>v1.0.0</span>
+    </footer>
+
+  </div>
+
+  <!-- TOAST ERROR NOTIFICATION -->
+  <div class="toast-container" id="errorToast">
+    <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></svg>
+    <span id="toastMessage">Threshold Min harus lebih kecil dari Threshold Max!</span>
+  </div>
+
+  <!-- CORE LOGIC -->
+  <script>
+    // ==========================================
+    // 1. CONFIGURATION & FIREBASE SWITCH
+    // ==========================================
+    const USE_FIREBASE = true;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDS36vzvbje14ZLAyn3jWmCuaFqCr7Szwk",
+      authDomain: "smartgardenaffan.firebaseapp.com",
+      databaseURL: "https://smartgardenaffan-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "smartgardenaffan",
+      storageBucket: "smartgardenaffan.firebasestorage.app",
+      messagingSenderId: "767497663648",
+      appId: "1:767497663648:web:d3246d0a870099303585c5",
+      measurementId: "G-9QNFBZ9ZGR"
+    };
+
+    // ==========================================
+    // 2. LIVE & HISTORICAL STATE
+    // ==========================================
+    let state = {
+      sensor: { temperature: 28.2, humidity: 76, soil: 60 },
+      control: { mode: "AUTO", pumpCommand: false },
+      setting: { soilMin: 30, soilMax: 60 },
+      status: { pumpState: false, wifiConnected: true, sensorHealthy: true, online: true, lastUpdate: Math.floor(Date.now() / 1000) }
+    };
+
+    // Seed realistic 24-hour historical logs
+    const seedHistory = Array.from({length: 24}, (_, i) => {
+      const hour = i;
+      return {
+        hour: hour,
+        temp: 26 + Math.sin(hour * 0.26) * 3 + Math.random() * 0.5,
+        humidity: 70 + Math.cos(hour * 0.2) * 10 + Math.random() * 2,
+        soil: 50 + Math.sin(hour * 0.4 + 1) * 15 + Math.random() * 3,
+      };
+    });
+
+    let currentChartTab = 'temp';
+
+    // ==========================================
+    // 3. DOM ELEMENTS MAPPINGS
+    // ==========================================
+    const elThemeToggle = document.getElementById('themeToggle');
+    const elThemeIcon = document.getElementById('themeIcon');
+    const elOfflineBanner = document.getElementById('firebaseOfflineBanner');
+    const elBtnConnect = document.getElementById('btnConnectFirebase');
+
+    // Hero
+    const elHealthScore = document.getElementById('healthScore');
+    const elRingProgress = document.querySelector('.ring-progress');
+    const elHeroStatusText = document.getElementById('heroStatusText');
+
+    // Sensors
+    const elTempValue = document.getElementById('tempValue');
+    const elTempBadge = document.getElementById('tempBadge');
+    const elTempDeltaText = document.getElementById('tempDeltaText');
+    const elTempDeltaIcon = document.getElementById('tempDeltaIcon');
+    
+    const elHumValue = document.getElementById('humValue');
+    const elHumBadge = document.getElementById('humBadge');
+    const elHumDeltaText = document.getElementById('humDeltaText');
+    const elHumDeltaIcon = document.getElementById('humDeltaIcon');
+
+    const elSoilValue = document.getElementById('soilValue');
+    const elSoilBadge = document.getElementById('soilBadge');
+    const elSoilDeltaText = document.getElementById('soilDeltaText');
+    const elSoilDeltaIcon = document.getElementById('soilDeltaIcon');
+
+    // Device Status
+    const elDevOnlineDot = document.getElementById('devOnlineDot');
+    const elDevOnlineText = document.getElementById('devOnlineText');
+    const elDevWifiDot = document.getElementById('devWifiDot');
+    const elDevWifiText = document.getElementById('devWifiText');
+    const elDevSensorDot = document.getElementById('devSensorDot');
+    const elDevSensorText = document.getElementById('devSensorText');
+    const elDevPumpDot = document.getElementById('devPumpDot');
+    const elDevPumpText = document.getElementById('devPumpText');
+
+    // Pump and mode control
+    const elModeToggle = document.getElementById('modeToggle');
+    const elBtnAuto = document.getElementById('btnAutoMode');
+    const elBtnManual = document.getElementById('btnManualMode');
+    const elPumpOnBtn = document.getElementById('pumpOnBtn');
+    const elPumpOffBtn = document.getElementById('pumpOffBtn');
+    const elPumpInfoBanner = document.getElementById('pumpInfoBanner');
+
+    // Sliders
+    const elStartSlider = document.getElementById('startSlider');
+    const elStartVal = document.getElementById('startVal');
+    const elStartFill = document.getElementById('startFill');
+
+    const elStopSlider = document.getElementById('stopSlider');
+    const elStopVal = document.getElementById('stopVal');
+    const elStopFill = document.getElementById('stopFill');
+
+    const elSaveThresholdBtn = document.getElementById('saveThresholdBtn');
+    const elActivityLog = document.getElementById('activityLog');
+    const elTextLastUpdate = document.getElementById('textLastUpdate');
+
+    // Toast
+    const elErrorToast = document.getElementById('errorToast');
+    const elToastMessage = document.getElementById('toastMessage');
+
+    // Sparklines Paths
+    const elTempSparkline = document.getElementById('tempSparkline');
+    const elHumSparkline = document.getElementById('humSparkline');
+    const elSoilSparkline = document.getElementById('soilSparkline');
+
+    // ==========================================
+    // 4. LIGHT/DARK THEME IMPLEMENTATION
+    // ==========================================
+    function initTheme() {
+      const savedTheme = localStorage.getItem('garden-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      updateThemeIcon(savedTheme);
+    }
+
+    function updateThemeIcon(theme) {
+      if (theme === 'light') {
+        elThemeIcon.innerHTML = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>`;
+      } else {
+        elThemeIcon.innerHTML = `
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        `;
+      }
+    }
+
+    elThemeToggle.addEventListener('click', () => {
+      const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+      const nextTheme = isDark ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', nextTheme);
+      localStorage.setItem('garden-theme', nextTheme);
+      updateThemeIcon(nextTheme);
+    });
+
+    // ==========================================
+    // 5. TOAST NOTIFIER
+    // ==========================================
+    function showToast(msg) {
+      elToastMessage.textContent = msg;
+      elErrorToast.classList.add('show');
+      setTimeout(() => {
+        elErrorToast.classList.remove('show');
+      }, 4000);
+    }
+
+    // ==========================================
+    // 6. HEALTH SCORE & UI CALCULATOR
+    // ==========================================
+    function calculateHealthScore(temp, humidity, soilMoisture) {
+      const tempScore = temp >= 20 && temp <= 32 ? 100 
+                      : temp < 20 ? Math.max(0, 100 - (20 - temp) * 5)
+                      : Math.max(0, 100 - (temp - 32) * 5);
+      
+      const humScore = humidity >= 50 && humidity <= 80 ? 100
+                     : humidity < 50 ? Math.max(0, 100 - (50 - humidity) * 2)
+                     : Math.max(0, 100 - (humidity - 80) * 2);
+      
+      const soilScore = soilMoisture >= 40 && soilMoisture <= 70 ? 100
+                      : soilMoisture < 40 ? Math.max(0, 100 - (40 - soilMoisture) * 3)
+                      : Math.max(0, 100 - (soilMoisture - 70) * 3);
+      
+      return Math.round(tempScore * 0.3 + humScore * 0.3 + soilScore * 0.4);
+    }
+
+    function updateHealthRing(score) {
+      const circumference = 2 * Math.PI * 54;
+      const offset = circumference * (1 - score / 100);
+      
+      elRingProgress.style.strokeDashoffset = offset;
+      
+      let color = '#30d158'; // Green
+      if (score < 40) color = '#ff453a'; // Red
+      else if (score < 70) color = '#ff9f0a'; // Orange
+      
+      elRingProgress.style.stroke = color;
+      
+      const prevScore = parseInt(elHealthScore.textContent) || 0;
+      animateValue(elHealthScore, prevScore, score, 800);
+    }
+
+    function animateValue(element, start, end, duration) {
+      const startTime = performance.now();
+      function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        const current = Math.round(start + (end - start) * eased);
+        element.textContent = current;
+        if (progress < 1) requestAnimationFrame(update);
+      }
+      requestAnimationFrame(update);
+    }
+
+    // ==========================================
+    // 7. CHART & SPARKLINES DRAWER (SVG)
+    // ==========================================
+    function buildSVGPath(points, width, height, padX = 20, padY = 20) {
+      if (points.length === 0) return '';
+      const min = Math.min(...points);
+      const max = Math.max(...points);
+      const range = max - min || 1;
+      const w = width - padX * 2;
+      const h = height - padY * 2;
+      
+      const coords = points.map((v, i) => ({
+        x: padX + (i / (points.length - 1)) * w,
+        y: padY + (1 - (v - min) / range) * h
+      }));
+      
+      let d = `M ${coords[0].x} ${coords[0].y}`;
+      for (let i = 1; i < coords.length; i++) {
+        const cp = {
+          x: (coords[i-1].x + coords[i].x) / 2,
+          y: coords[i-1].y
+        };
+        const cp2 = {
+          x: (coords[i-1].x + coords[i].x) / 2,
+          y: coords[i].y
+        };
+        d += ` C ${cp.x} ${cp.y}, ${cp2.x} ${cp2.y}, ${coords[i].x} ${coords[i].y}`;
+      }
+      return { path: d, coords: coords };
+    }
+
+    function drawSparklines() {
+      const temps = seedHistory.map(d => d.temp);
+      const hums = seedHistory.map(d => d.humidity);
+      const soils = seedHistory.map(d => d.soil);
+
+      elTempSparkline.setAttribute('d', buildSVGPath(temps, 200, 40, 5, 5).path);
+      elHumSparkline.setAttribute('d', buildSVGPath(hums, 200, 40, 5, 5).path);
+      elSoilSparkline.setAttribute('d', buildSVGPath(soils, 200, 40, 5, 5).path);
+    }
+
+    function updateMainChart(type) {
+      let dataPoints = [];
+      let colorClass = 'var(--accent-orange)';
+      
+      if (type === 'temp') {
+        dataPoints = seedHistory.map(d => d.temp);
+        colorClass = 'var(--accent-orange)';
+      } else if (type === 'hum') {
+        dataPoints = seedHistory.map(d => d.humidity);
+        colorClass = 'var(--accent-blue)';
+      } else {
+        dataPoints = seedHistory.map(d => d.soil);
+        colorClass = 'var(--accent-green)';
+      }
+
+      const svgPath = document.getElementById('chartPath');
+      const svgFill = document.getElementById('chartFill');
+      const gradStart = document.getElementById('gradStopStart');
+      const gradEnd = document.getElementById('gradStopEnd');
+      
+      gradStart.setAttribute('stop-color', colorClass);
+      gradEnd.setAttribute('stop-color', colorClass);
+      
+      const { path, coords } = buildSVGPath(dataPoints, 800, 200, 30, 20);
+      
+      // Line drawing
+      svgPath.setAttribute('d', path);
+      svgPath.style.stroke = colorClass;
+      svgPath.classList.remove('animate');
+      void svgPath.offsetWidth; // trigger reflow
+      svgPath.classList.add('animate');
+
+      // Gradient Area fill path
+      if (coords.length > 0) {
+        const fillPath = `${path} L ${coords[coords.length - 1].x} 180 L ${coords[0].x} 180 Z`;
+        svgFill.setAttribute('d', fillPath);
+        svgFill.classList.remove('animate');
+        void svgFill.offsetWidth;
+        svgFill.classList.add('animate');
+      }
+    }
+
+    // Chart tabs handler
+    document.querySelectorAll('.chart-tab').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentChartTab = tab.dataset.chart;
+        updateMainChart(currentChartTab);
+      });
+    });
+
+    // ==========================================
+    // 8. LIVE UI REFRESH
+    // ==========================================
+    function updateUI() {
+      // 1. Core Health Calculation
+      const health = calculateHealthScore(state.sensor.temperature, state.sensor.humidity, state.sensor.soil);
+      updateHealthRing(health);
+
+      // 2. Set Hero Status Title
+      elHeroStatusText.textContent = `Sistem Aktif — ${state.control.mode} MODE`;
+
+      // 3. Sensor Cards Text updates
+      const prevTemp = parseFloat(elTempValue.textContent) || 0;
+      animateValue(elTempValue, prevTemp, state.sensor.temperature, 800);
+      
+      const prevHum = parseInt(elHumValue.textContent) || 0;
+      animateValue(elHumValue, prevHum, state.sensor.humidity, 800);
+
+      const prevSoil = parseInt(elSoilValue.textContent) || 0;
+      animateValue(elSoilValue, prevSoil, state.sensor.soil, 800);
+
+      // Card statuses
+      updateSensorBadge(elTempBadge, state.sensor.temperature >= 20 && state.sensor.temperature <= 32 ? 'Ideal' : 'Kurang', state.sensor.temperature >= 20 && state.sensor.temperature <= 32 ? 'ok' : 'warn');
+      updateSensorBadge(elHumBadge, state.sensor.humidity >= 50 && state.sensor.humidity <= 80 ? 'Ideal' : 'Kering', state.sensor.humidity >= 50 && state.sensor.humidity <= 80 ? 'ok' : 'warn');
+      updateSensorBadge(elSoilBadge, state.sensor.soil >= 40 && state.sensor.soil <= 70 ? 'Ideal' : (state.sensor.soil < 40 ? 'Kering' : 'Basah'), state.sensor.soil >= 40 && state.sensor.soil <= 70 ? 'ok' : 'warn');
+
+      // 4. Device status cards
+      // Sesuai permintaan: Kita percaya saja dengan data terakhir dari ESP32 (dipalsukan agar selalu positif jika ESP32 mati tiba-tiba)
+      const isEspOnline = state.status.online !== false; 
+      const isWifiConnected = state.status.wifiConnected !== false;
+      const isSensorHealthy = state.status.sensorHealthy !== false;
+      
+      updateDeviceStatus(elDevOnlineDot, elDevOnlineText, isEspOnline ? 'Online' : 'Offline', isEspOnline ? 'green' : 'red');
+      updateDeviceStatus(elDevWifiDot, elDevWifiText, isWifiConnected ? 'Terhubung' : 'Terputus', isWifiConnected ? 'green' : 'red');
+      updateDeviceStatus(elDevSensorDot, elDevSensorText, isSensorHealthy ? 'Sehat' : 'Error', isSensorHealthy ? 'green' : 'red');
+      updateDeviceStatus(elDevPumpDot, elDevPumpText, state.status.pumpState ? 'Menyala' : 'Mati', state.status.pumpState ? 'green' : 'red');
+
+      // Remove loading states ONLY if ESP32 status matches our commands (or if status.mode hasn't been set yet)
+      if (!state.status.mode || state.status.mode === state.control.mode) {
+        elBtnAuto.classList.remove('btn-loading');
+        elBtnManual.classList.remove('btn-loading');
+      }
+      
+      if (state.status.pumpState === state.control.pumpCommand) {
+        elPumpOnBtn.classList.remove('btn-loading');
+        elPumpOffBtn.classList.remove('btn-loading');
+      }
+
+      // 5. Controls styling matching state
+      if (state.control.mode === 'AUTO') {
+        elModeToggle.classList.remove('manual');
+        elBtnAuto.classList.add('active');
+        elBtnManual.classList.remove('active');
+        
+        elPumpOnBtn.disabled = true;
+        elPumpOffBtn.disabled = true;
+        elPumpOnBtn.classList.remove('active');
+        elPumpOffBtn.classList.remove('active');
+        elPumpInfoBanner.style.display = 'flex';
+      } else {
+        elModeToggle.classList.add('manual');
+        elBtnAuto.classList.remove('active');
+        elBtnManual.classList.add('active');
+        
+        elPumpOnBtn.disabled = false;
+        elPumpOffBtn.disabled = false;
+        elPumpInfoBanner.style.display = 'none';
+        
+        if (state.control.pumpCommand) {
+          elPumpOnBtn.classList.add('active');
+          elPumpOffBtn.classList.remove('active');
+        } else {
+          elPumpOnBtn.classList.remove('active');
+          elPumpOffBtn.classList.add('active');
+        }
+      }
+
+      // Sync range inputs unless they are actively focused/dragged
+      if (document.activeElement !== elStartSlider) {
+        elStartSlider.value = state.setting.soilMin;
+        elStartVal.textContent = state.setting.soilMin + '%';
+        elStartFill.style.width = state.setting.soilMin + '%';
+      }
+      if (document.activeElement !== elStopSlider) {
+        elStopSlider.value = state.setting.soilMax;
+        elStopVal.textContent = state.setting.soilMax + '%';
+        elStopFill.style.width = state.setting.soilMax + '%';
+      }
+
+      // Date update
+      if (state.status.lastUpdate) {
+        const d = new Date(state.status.lastUpdate * 1000);
+        elTextLastUpdate.textContent = d.toLocaleTimeString('id-ID') + ' ' + d.toLocaleDateString('id-ID');
+      }
+    }
+
+    function updateSensorBadge(badgeEl, text, statusClass) {
+      badgeEl.textContent = text;
+      badgeEl.className = `status-badge status-${statusClass}`;
+    }
+
+    function updateDeviceStatus(dotEl, textEl, text, color) {
+      textEl.textContent = text;
+      dotEl.className = `status-dot dot-${color}`;
+    }
+
+    // ==========================================
+    // 9. CONTROLS TRIGGER & DATABASE WRITE
+    // ==========================================
+    function setSystemMode(mode) {
+      if (mode === 'AUTO') elBtnAuto.classList.add('btn-loading');
+      else elBtnManual.classList.add('btn-loading');
+
+      if (USE_FIREBASE && firebase.apps.length > 0) {
+        showToast(`Memproses pergantian ke mode ${mode}...`);
+        firebase.database().ref('control/mode').set(mode)
+          .catch(err => {
+            showToast("Error: " + err.message);
+            updateUI(); // remove loading if error
+          });
+      } else {
+        state.control.mode = mode;
+        addLogEntry(`Sistem beralih ke mode ${mode}`, 'info');
+        updateUI();
+      }
+    }
+
+    function setPumpState(stateVal) {
+      if (state.control.mode === 'AUTO') {
+        showToast("Tombol dinonaktifkan dalam mode AUTO!");
+        return;
+      }
+      
+      if (stateVal) elPumpOnBtn.classList.add('btn-loading');
+      else elPumpOffBtn.classList.add('btn-loading');
+
+      if (USE_FIREBASE && firebase.apps.length > 0) {
+        showToast(`Mengirim perintah mematikan/menyalakan pompa...`);
+        firebase.database().ref('control/pumpCommand').set(stateVal)
+          .catch(err => {
+            showToast("Error: " + err.message);
+            updateUI(); // remove loading if error
+          });
+      } else {
+        state.control.pumpCommand = stateVal;
+        state.status.pumpState = stateVal;
+        state.status.lastUpdate = Math.floor(Date.now() / 1000);
+        addLogEntry(`Manual: Pompa ${stateVal ? 'dinyalakan' : 'dimatikan'}`, stateVal ? 'water' : 'info');
+        updateUI();
+      }
+    }
+
+    elBtnAuto.addEventListener('click', () => setSystemMode('AUTO'));
+    elBtnManual.addEventListener('click', () => setSystemMode('MANUAL'));
+    elPumpOnBtn.addEventListener('click', () => setPumpState(true));
+    elPumpOffBtn.addEventListener('click', () => setPumpState(false));
+
+    // Sliders drag sync
+    elStartSlider.addEventListener('input', (e) => {
+      const val = e.target.value;
+      elStartVal.textContent = val + '%';
+      elStartFill.style.width = val + '%';
+      
+      // Visual Save state reset
+      elSaveThresholdBtn.classList.remove('saved');
+      elSaveThresholdBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Simpan Pengaturan`;
+    });
+
+    elStopSlider.addEventListener('input', (e) => {
+      const val = e.target.value;
+      elStopVal.textContent = val + '%';
+      elStopFill.style.width = val + '%';
+      
+      elSaveThresholdBtn.classList.remove('saved');
+      elSaveThresholdBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Simpan Pengaturan`;
+    });
+
+    // Save Settings
+    elSaveThresholdBtn.addEventListener('click', () => {
+      const min = parseInt(elStartSlider.value);
+      const max = parseInt(elStopSlider.value);
+
+      if (min >= max) {
+        showToast("Mulai Menyiram (Min) harus lebih kecil dari Berhenti Menyiram (Max)!");
+        return;
+      }
+
+      if (USE_FIREBASE && firebase.apps.length > 0) {
+        const updates = { 'setting/soilMin': min, 'setting/soilMax': max };
+        firebase.database().ref().update(updates)
+          .then(() => {
+            elSaveThresholdBtn.classList.add('saved');
+            elSaveThresholdBtn.innerHTML = `✓ Tersimpan`;
+          })
+          .catch(err => showToast("Error: " + err.message));
+      } else {
+        state.setting.soilMin = min;
+        state.setting.soilMax = max;
+        addLogEntry(`Threshold diperbarui: Min ${min}% | Max ${max}%`, 'info');
+        updateUI();
+        
+        elSaveThresholdBtn.classList.add('saved');
+        elSaveThresholdBtn.innerHTML = `✓ Tersimpan`;
+      }
+    });
+
+    // ==========================================
+    // 10. REAL-TIME ACTIVITY LOGS TIMELINE
+    // ==========================================
+    function addLogEntry(message, type) {
+      const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const item = document.createElement('div');
+      item.className = `log-entry log-${type}`;
+      item.innerHTML = `
+        <div class="log-dot"></div>
+        <div class="log-content">
+          <span class="log-time">${timeStr}</span>
+          <span class="log-msg">${message}</span>
+        </div>
+      `;
+      
+      // Animate entry in
+      item.style.opacity = '0';
+      item.style.transform = 'translateX(-8px)';
+      elActivityLog.insertBefore(item, elActivityLog.firstChild);
+      
+      requestAnimationFrame(() => {
+        item.style.transition = 'all 0.3s ease';
+        item.style.opacity = '1';
+        item.style.transform = 'translateX(0)';
+      });
+
+      // Keep max 6 items visible
+      while (elActivityLog.children.length > 6) {
+        elActivityLog.removeChild(elActivityLog.lastChild);
+      }
+    }
+
+    // ==========================================
+    // 11. DYNAMIC SIMULATION PHYSICS (3s INTERVAL)
+    // ==========================================
+    function initSimulation() {
+      if (USE_FIREBASE) return;
+
+      elOfflineBanner.style.display = 'none';
+
+      // Insert starting logs
+      addLogEntry("Sistem dimulai dalam mode AUTO", "info");
+
+      setInterval(() => {
+        // 1. Water evaporation or absorption logic simulation
+        if (state.status.pumpState) {
+          state.sensor.soil = Math.min(100, state.sensor.soil + 4);
+        } else {
+          state.sensor.soil = Math.max(10, state.sensor.soil - 1);
+        }
+
+        // 2. Ambient sensor fluctuations
+        state.sensor.temperature += (Math.random() - 0.5) * 0.4;
+        state.sensor.temperature = Math.max(18, Math.min(38, state.sensor.temperature));
+
+        state.sensor.humidity += Math.round((Math.random() - 0.5) * 2);
+        state.sensor.humidity = Math.max(25, Math.min(95, state.sensor.humidity));
+
+        // 3. Auto Mode rules trigger
+        if (state.control.mode === 'AUTO') {
+          if (state.sensor.soil <= state.setting.soilMin && !state.status.pumpState) {
+            state.status.pumpState = true;
+            addLogEntry(`Auto: Kelembaban ${state.sensor.soil}% <= Min ${state.setting.soilMin}%. Pompa menyala.`, 'water');
+          } else if (state.sensor.soil >= state.setting.soilMax && state.status.pumpState) {
+            state.status.pumpState = false;
+            addLogEntry(`Auto: Kelembaban ${state.sensor.soil}% >= Max ${state.setting.soilMax}%. Pompa dimatikan.`, 'info');
+          }
+        }
+
+        state.status.online = true;
+        state.status.wifiConnected = true;
+        state.status.sensorHealthy = true;
+        state.status.lastUpdate = Math.floor(Date.now() / 1000);
+
+        // Update historical array for the chart
+        seedHistory.shift();
+        seedHistory.push({
+          hour: new Date().getHours(),
+          temp: state.sensor.temperature,
+          humidity: state.sensor.humidity,
+          soil: state.sensor.soil
+        });
+
+        // Redraw current active chart and UI
+        updateMainChart(currentChartTab);
+        drawSparklines();
+        updateUI();
+      }, 3000);
+    }
+
+    // ==========================================
+    // 12. FIREBASE DATABASE INTEGRATION CODE
+    // ==========================================
+    function loadFirebase() {
+      if (!USE_FIREBASE) {
+        initSimulation();
+        return;
+      }
+
+      const appScript = document.createElement('script');
+      appScript.src = "https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js";
+      
+      appScript.onload = () => {
+        const dbScript = document.createElement('script');
+        dbScript.src = "https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js";
+        
+        dbScript.onload = () => {
+          initFirebaseDB();
+        };
+        document.head.appendChild(dbScript);
+      };
+      document.head.appendChild(appScript);
+    }
+
+    function initFirebaseDB() {
+      try {
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        db.ref(".info/connected").on("value", (snap) => {
+          if (snap.val() === true) {
+            elOfflineBanner.style.display = 'none';
+            state.status.online = true;
+            updateUI();
+          } else {
+            elOfflineBanner.style.display = 'flex';
+            state.status.online = false;
+            updateUI();
+          }
+        });
+
+        db.ref().on('value', (snapshot) => {
+          const val = snapshot.val();
+          if (val) {
+            if (val.sensor) state.sensor = { ...state.sensor, ...val.sensor };
+            if (val.control) state.control = { ...state.control, ...val.control };
+            if (val.setting) state.setting = { ...state.setting, ...val.setting };
+            if (val.status) state.status = { ...state.status, ...val.status };
+            
+            // Push to historical data
+            seedHistory.shift();
+            seedHistory.push({
+              hour: new Date().getHours(),
+              temp: state.sensor.temperature,
+              humidity: state.sensor.humidity,
+              soil: state.sensor.soil
+            });
+
+            updateMainChart(currentChartTab);
+            drawSparklines();
+            updateUI();
+          }
+        });
+
+      } catch (err) {
+        console.error(err);
+        elOfflineBanner.style.display = 'flex';
+        initSimulation();
+      }
+    }
+
+    elBtnConnect.addEventListener('click', () => {
+      showToast("Menghubungkan ke Firebase...");
+      initFirebaseDB();
+    });
+
+    // ==========================================
+    // 13. STAGGERED PAGE ENTRY ANIMATIONS
+    // ==========================================
+    function initEntryAnimations() {
+      const items = document.querySelectorAll('[data-animate]');
+      items.forEach(el => {
+        const delay = parseInt(el.getAttribute('data-delay')) || 0;
+        setTimeout(() => {
+          el.classList.add('visible');
+        }, delay);
+      });
+    }
+
+    // ==========================================
+    // 14. INITIALIZE APPLICATION
+    // ==========================================
+    initTheme();
+    drawSparklines();
+    updateMainChart('temp');
+    updateUI();
+    loadFirebase();
+    setTimeout(initEntryAnimations, 50);
+
+  </script>
+</body>
+</html>
